@@ -177,12 +177,23 @@ tournament
 team_stats
 seed_diff
 ```
-```{r}
+```{r final_data}
 final_data = tournament %>%
   left_join(team_stats, c('team1' = 'team_id')) %>%
   rename(team_mean_score1 = team_mean_score, team_sd_score1 = team_sd_score) %>%
   left_join(team_stats, c('team2' = 'team_id')) %>%
   rename(team_mean_score2 = team_mean_score, team_sd_score2 = team_sd_score) %>%
-  left_join(seed_diff, by = c('team1' = 'team_id'))
+  left_join(seed_diff, by = c('team1' = 'team_id')) %>%
+  mutate(seed_bonus = if_else(team1_seed < team2_seed, -1*mean_score_diff, mean_score_diff),
+         seed_bonus = replace_na(seed_bonus, 0)) %>%
+  mutate(team1_prediction = team_mean_score1 + seed_bonus,
+         team2_prediction = team_mean_score2 + seed_bonus,
+         predicted_difference = team1_prediction - team2_prediction,
+         team1_win = if_else(predicted_difference > 0, 1, 0))
+final_data
+```
+
+```{r}
+output = final_data[!duplicated(final_data[1:3]),]
 ```
 
