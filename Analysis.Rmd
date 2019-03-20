@@ -20,6 +20,7 @@ raw_seeds = read_csv('input/DataFiles/NCAATourneySeeds.csv')
 raw_season_results = read_csv('input/Prelim2019_RegularSeasonCompactResults.csv')
 raw_tournament_results = read_csv('input/DataFiles/NCAATourneyCompactResults.csv')
 raw_team_names = read_csv('input/DataFiles/Teams.csv')
+raw_coaches = read_csv('input/Prelim2019_TeamCoaches.csv')
 ```
 
 
@@ -40,6 +41,9 @@ seeds = raw_seeds %>%
   general_filter() %>%
   mutate(seed = parse_number(Seed)) %>%
   select(-Seed)
+
+coaches = raw_coaches %>%
+  general_filter()
   
 season_results = raw_season_results %>% 
   general_filter() %>%
@@ -51,36 +55,34 @@ tournament_results = raw_tournament_results %>%
   select(Season, DayNum, WTeamID, LTeamID, LScore, WScore) %>%
   mutate(game_type = 'tournament')
 
-all_team_results = season_results %>% bind_rows(tournament_results)
+all_team_results = season_results %>% 
+  bind_rows(tournament_results)
+
+all_results = all_team_results %>%
+  left_join(seeds, by = c('Season', 'WTeamID' = 'TeamID')) %>%
+  rename(WSeed = seed) %>%
+  left_join(seeds, by = c('Season', 'LTeamID' = 'TeamID')) %>%
+  rename(LSeed = seed)
 ```
 
 ```{r score_calculations}
-winning_team_scoring = all_team_results %>%
-  select(game_type, WTeamID, WScore) %>%
-  rename(team_id = WTeamID, score = WScore) %>%
-  mutate(win = TRUE)
+winning_team_scoring = all_results %>%
+  select(Season, game_type, WTeamID, WScore, WSeed) %>%
+  rename(team_id = WTeamID, score = WScore, seed = WSeed) %>%
+  mutate(win = TRUE) %>%
+  drop_na()
 
-losing_team_scoring = all_team_results %>%
-  select(game_type, LTeamID, LScore) %>%
-  rename(team_id = LTeamID, score = LScore) %>%
-  mutate(win = TRUE)
+losing_team_scoring = all_results %>%
+  select(Season, game_type, LTeamID, LScore, LSeed) %>%
+  rename(team_id = LTeamID, score = LScore, seed = LSeed) %>%
+  mutate(win = TRUE) %>%
+  drop_na()
 
 team_scoring = winning_team_scoring %>% 
-  bind_rows(losing_team_scoring) %>%
-  group_by()
-```
-
-
-```{r merge_data}
-my_df = team_scoring %>%
-  group_by(team_id) %>%
-  summarize(mean_score = mean(score), sd_score = sd(score))
-```
-
-
-
-```{r}
-
+  bind_rows(losing_team_scoring)
+  
+  
+team_scoring
 ```
 
 
