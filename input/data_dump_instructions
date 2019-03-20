@@ -1,0 +1,3 @@
+Dump data into this folder. Data will be referenced via relative path ... 
+"input/MasseyOrdinals.csv" 
+"input/DataFiles/Teams.csv"
