@@ -179,6 +179,8 @@ tournament
 ```{r}
 final_data = tournament %>%
   left_join(team_stats, c('team1' = 'team_id')) %>%
-  left_join(team_stats, c('team2' = 'team_id'), suffix.x = '_1', suffix.y = '_2')
+  rename(team_mean_score1 = team_mean_score, team_sd_score1 = team_sd_score) %>%
+  left_join(team_stats, c('team2' = 'team_id')) %>%
+  rename(team_mean_score2 = team_mean_score, team_sd_score2 = team_sd_score)
 ```
 
