@@ -13,4 +13,74 @@ https://www.kaggle.com/c/mens-machine-learning-competition-2019/data
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, include = FALSE)
 library(tidyverse)
 ```
+  
+
+```{r raw_data}
+raw_seeds = read_csv('input/DataFiles/NCAATourneySeeds.csv')
+raw_season_results = read_csv('input/Prelim2019_RegularSeasonCompactResults.csv')
+raw_tournament_results = read_csv('input/DataFiles/NCAATourneyCompactResults.csv')
+raw_team_names = read_csv('input/DataFiles/Teams.csv')
+```
+
+
+```{r filter_functions}
+filter_gte_year = "2003"
+
+general_filter = function(df){
+  df = df %>%
+    filter(Season >= filter_gte_year)
+  return(df)
+}
+
+```
+
+
+```{r data}
+seeds = raw_seeds %>% 
+  general_filter() %>%
+  mutate(seed = parse_number(Seed)) %>%
+  select(-Seed)
+  
+season_results = raw_season_results %>% 
+  general_filter() %>%
+  select(Season, DayNum, WTeamID, LTeamID, LScore, WScore) %>%
+  mutate(game_type = 'season')
+
+tournament_results = raw_tournament_results %>% 
+  general_filter()  %>%
+  select(Season, DayNum, WTeamID, LTeamID, LScore, WScore) %>%
+  mutate(game_type = 'tournament')
+
+all_team_results = season_results %>% bind_rows(tournament_results)
+```
+
+```{r score_calculations}
+winning_team_scoring = all_team_results %>%
+  select(game_type, WTeamID, WScore) %>%
+  rename(team_id = WTeamID, score = WScore) %>%
+  mutate(win = TRUE)
+
+losing_team_scoring = all_team_results %>%
+  select(game_type, LTeamID, LScore) %>%
+  rename(team_id = LTeamID, score = LScore) %>%
+  mutate(win = TRUE)
+
+team_scoring = winning_team_scoring %>% 
+  bind_rows(losing_team_scoring) %>%
+  group_by()
+```
+
+
+```{r merge_data}
+my_df = team_scoring %>%
+  group_by(team_id) %>%
+  summarize(mean_score = mean(score), sd_score = sd(score))
+```
+
+
+
+```{r}
+
+```
+
 
