@@ -67,22 +67,70 @@ all_results = all_team_results %>%
 
 ```{r score_calculations}
 winning_team_scoring = all_results %>%
-  select(Season, game_type, WTeamID, WScore, WSeed) %>%
+  select(Season, DayNum, game_type, WTeamID, WScore, WSeed) %>%
   rename(team_id = WTeamID, score = WScore, seed = WSeed) %>%
-  mutate(win = TRUE) %>%
+  mutate(win = 'win') %>%
   drop_na()
 
 losing_team_scoring = all_results %>%
-  select(Season, game_type, LTeamID, LScore, LSeed) %>%
+  select(Season, DayNum, game_type, LTeamID, LScore, LSeed) %>%
   rename(team_id = LTeamID, score = LScore, seed = LSeed) %>%
-  mutate(win = TRUE) %>%
+  mutate(win = 'lose') %>%
   drop_na()
 
 team_scoring = winning_team_scoring %>% 
-  bind_rows(losing_team_scoring)
-  
-  
-team_scoring
+  bind_rows(losing_team_scoring) %>%
+  arrange(Season, DayNum) %>%
+  drop_na()
 ```
 
+```{r calculating_metrics}
+by_season = team_scoring %>% 
+  group_by(Season, team_id) %>%
+  summarize(mean_score = mean(score), sd_score = sd(score)) %>%
+  mutate(sd_score = replace_na(sd_score, 1)) %>%
+  group_by(team_id) %>%
+  summarize(mean_score = mean(mean_score), sd_score = mean(sd_score)) %>%
+  mutate(sd_score = replace_na(sd_score, 1))
+
+by_daynum = team_scoring %>%
+  group_by(DayNum, team_id) %>%
+  summarize(mean_score = mean(score), sd_score = sd(score)) %>%
+  mutate(sd_score = replace_na(sd_score, 1)) %>%
+  group_by(team_id) %>%
+  summarize(mean_score = mean(mean_score), sd_score = mean(sd_score)) %>%
+  mutate(sd_score = replace_na(sd_score, 1))
+
+by_gametype = team_scoring %>%
+  group_by(game_type, team_id) %>%
+  summarize(mean_score = mean(score), sd_score = sd(score)) %>%
+  mutate(sd_score = replace_na(sd_score, 1)) %>%
+  group_by(team_id) %>%
+  summarize(mean_score = mean(mean_score), sd_score = mean(sd_score)) %>%
+  mutate(sd_score = replace_na(sd_score, 1))
+
+by_seed = team_scoring %>%
+  group_by(seed, team_id) %>%
+  summarize(mean_score = mean(score), sd_score = sd(score)) %>%
+  mutate(sd_score = replace_na(sd_score, 1)) %>%
+  group_by(team_id) %>%
+  summarize(mean_score = mean(mean_score), sd_score = mean(sd_score)) %>%
+  mutate(sd_score = replace_na(sd_score, 1))
+
+by_win = team_scoring %>%
+  group_by(win, team_id) %>%
+  summarize(mean_score = mean(score), sd_score = sd(score)) %>%
+  mutate(sd_score = replace_na(sd_score, 1)) %>%
+  group_by(team_id) %>%
+  summarize(mean_score = mean(mean_score), sd_score = mean(sd_score)) %>%
+  mutate(sd_score = replace_na(sd_score, 1))
+```
+
+
+```{r average_of_averages}
+team_stats = by_season %>%
+  bind_rows(by_daynum, by_gametype, by_seed, by_win) %>%
+  group_by(team_id) %>%
+  summarize(mean_score = mean(mean_score), sd_score = mean(sd_score))
+```
 
