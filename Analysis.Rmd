@@ -63,18 +63,18 @@ all_results = all_team_results %>%
   rename(WSeed = seed) %>%
   left_join(seeds, by = c('Season', 'LTeamID' = 'TeamID')) %>%
   rename(LSeed = seed) %>%
-  mutate(seed_diff = WSeed - LSeed)
+  mutate(seed_diff = WSeed - LSeed, score_diff = WScore - LScore)
 ```
 
 ```{r score_calculations}
 winning_team_scoring = all_results %>%
-  select(Season, DayNum, game_type, WTeamID, WScore, WSeed, seed_diff) %>%
+  select(Season, DayNum, game_type, WTeamID, WScore, WSeed, seed_diff, score_diff) %>%
   rename(team_id = WTeamID, score = WScore, seed = WSeed) %>%
   mutate(win = 'win') %>%
   drop_na()
 
 losing_team_scoring = all_results %>%
-  select(Season, DayNum, game_type, LTeamID, LScore, LSeed, seed_diff) %>%
+  select(Season, DayNum, game_type, LTeamID, LScore, LSeed, seed_diff, score_diff) %>%
   rename(team_id = LTeamID, score = LScore, seed = LSeed) %>%
   mutate(win = 'lose') %>%
   drop_na()
@@ -125,6 +125,14 @@ by_win = team_scoring %>%
   group_by(team_id) %>%
   summarize(mean_score = mean(mean_score), sd_score = mean(sd_score)) %>%
   mutate(sd_score = replace_na(sd_score, 1))
+
+by_seeddiff = team_scoring %>%
+  group_by(seed_diff, team_id) %>%
+  summarize(mean_score = mean(score), sd_score = sd(score)) %>%
+  mutate(sd_score = replace_na(sd_score, 1)) %>%
+  group_by(team_id) %>%
+  summarize(mean_score = mean(mean_score), sd_score = mean(sd_score)) %>%
+  mutate(sd_score = replace_na(sd_score, 1))
 ```
 
 
@@ -132,7 +140,7 @@ by_win = team_scoring %>%
 team_stats = by_season %>%
   bind_rows(by_daynum, by_gametype, by_seed, by_win) %>%
   group_by(team_id) %>%
-  summarize(mean_score = mean(mean_score), sd_score = mean(sd_score))
+  summarize(team_mean_score = mean(mean_score), team_sd_score = mean(sd_score))
 ```
 
 ```{r simulation}
