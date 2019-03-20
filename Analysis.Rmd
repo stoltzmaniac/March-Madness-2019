@@ -1,0 +1,16 @@
+---
+title: "March Madness 2019"
+author: "Scott Stoltzman"
+date: "3/19/2019"
+output: html_document
+---
+
+#### All data from:  
+https://www.kaggle.com/c/mens-machine-learning-competition-2019/data
+
+```{r setup, include=FALSE}
+# Setting everything for initial analysis, will add warning = FALSE when going to knit for real
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, include = FALSE)
+library(tidyverse)
+```
+
