@@ -195,6 +195,15 @@ final_data
 
 ```{r}
 output = final_data[!duplicated(final_data[1:3]),]
-output %>% write_csv('output.csv')
+output %>% select(team_name1, team_name2, team1_win, predicted_difference) %>% write_csv('output.csv')
+```
+
+```{r}
+ggplot(output, aes(x=seed_diff, y=predicted_difference)) + geom_point() + geom_smooth(method='lm')
+```
+
+```{r}
+p = ggplot(output, aes(x=factor(seed_diff), y=predicted_difference)) + geom_violin()
+p
 ```
 
