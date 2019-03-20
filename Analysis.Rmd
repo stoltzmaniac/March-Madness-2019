@@ -104,7 +104,8 @@ team_scoring = winning_team_scoring %>%
 seed_diff = team_scoring %>%
   filter(win == 'win') %>%
   group_by(team_id, seed, seed_diff) %>%
-  summarize(mean_score_diff = mean(score_diff))
+  summarize(mean_score_diff = mean(score_diff)) %>%
+  select(team_id, mean_score_diff)
 ```
 
 ```{r}
@@ -172,15 +173,16 @@ team_stats = by_season %>%
 
 ```{r what_to_use}
 # Use:
+tournament
 team_stats
 seed_diff
-tournament
 ```
 ```{r}
 final_data = tournament %>%
   left_join(team_stats, c('team1' = 'team_id')) %>%
   rename(team_mean_score1 = team_mean_score, team_sd_score1 = team_sd_score) %>%
   left_join(team_stats, c('team2' = 'team_id')) %>%
-  rename(team_mean_score2 = team_mean_score, team_sd_score2 = team_sd_score)
+  rename(team_mean_score2 = team_mean_score, team_sd_score2 = team_sd_score) %>%
+  left_join(seed_diff, by = c('team1' = 'team_id'))
 ```
 
