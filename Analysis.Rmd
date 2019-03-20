@@ -21,6 +21,9 @@ raw_season_results = read_csv('input/Prelim2019_RegularSeasonCompactResults.csv'
 raw_tournament_results = read_csv('input/DataFiles/NCAATourneyCompactResults.csv')
 raw_team_names = read_csv('input/DataFiles/Teams.csv')
 raw_coaches = read_csv('input/Prelim2019_TeamCoaches.csv')
+raw_matchups = read_csv('input/SampleSubmissionStage2.csv')
+# raw_team_names %>% filter(LastD1Season == 2019) %>% write_csv('team_seeds.csv') #filled in manually
+raw_tournament_seeds = read_csv('team_seeds.csv') %>% drop_na()
 ```
 
 
@@ -64,27 +67,44 @@ all_results = all_team_results %>%
   left_join(seeds, by = c('Season', 'LTeamID' = 'TeamID')) %>%
   rename(LSeed = seed) %>%
   mutate(seed_diff = WSeed - LSeed, score_diff = WScore - LScore)
+
+tournament_matchups = raw_matchups %>%
+  mutate(id = ID) %>%
+  separate(ID, c('Season', 'team1','team2'), '_') %>%
+  mutate(team1 = as.integer(team1), team2 = as.integer(team2)) %>%
+  general_filter() %>%
+  select(-Pred)
+
+tournament_seeds = raw_tournament_seeds %>% 
+  select(TeamID, TeamName, Seed)
+
+tournament = tournament_matchups %>%
+  left_join(tournament_seeds, by = c('team1' = 'TeamID')) %>%
+  rename(team1_seed = Seed, team_name1 = TeamName) %>%
+  left_join(tournament_seeds, by = c('team2' = 'TeamID')) %>%
+  rename(team2_seed = Seed, team_name2 = TeamName) %>%
+  mutate(seed_diff = team1_seed - team2_seed)
 ```
 
 ```{r score_calculations}
 winning_team_scoring = all_results %>%
   select(Season, DayNum, game_type, WTeamID, WScore, WSeed, seed_diff, score_diff) %>%
   rename(team_id = WTeamID, score = WScore, seed = WSeed) %>%
-  mutate(win = 'win') %>%
-  drop_na()
+  mutate(win = 'win')
 
 losing_team_scoring = all_results %>%
   select(Season, DayNum, game_type, LTeamID, LScore, LSeed, seed_diff, score_diff) %>%
   rename(team_id = LTeamID, score = LScore, seed = LSeed) %>%
-  mutate(win = 'lose') %>%
-  drop_na()
+  mutate(win = 'lose')
 
 team_scoring = winning_team_scoring %>% 
   bind_rows(losing_team_scoring) %>%
-  mutate(diff_pct = score_diff / score) %>%
-  mutate(diff_pct = if_else(win == 'lose', -1*(1+diff_pct), 1+diff_pct)) %>%
-  arrange(Season, DayNum) %>%
-  drop_na()
+  arrange(Season, DayNum)
+
+seed_diff = team_scoring %>%
+  filter(win == 'win') %>%
+  group_by(team_id, seed, seed_diff) %>%
+  summarize(mean_score_diff = mean(score_diff))
 ```
 
 ```{r}
@@ -95,50 +115,50 @@ ggplot(team_scoring, aes(x=factor(seed), y=diff_pct)) + geom_boxplot()
 ```{r calculating_metrics}
 by_season = team_scoring %>% 
   group_by(Season, team_id) %>%
-  summarize(mean_score = mean(score), sd_score = sd(score), mean_diff_pct = mean(diff_pct)) %>%
+  summarize(mean_score = mean(score), sd_score = sd(score)) %>%
   mutate(sd_score = replace_na(sd_score, 1)) %>%
   group_by(team_id) %>%
-  summarize(mean_score = mean(mean_score), sd_score = mean(sd_score), mean_diff_pct = mean(mean_diff_pct)) %>%
+  summarize(mean_score = mean(mean_score), sd_score = mean(sd_score)) %>%
   mutate(sd_score = replace_na(sd_score, 1))
 
 by_daynum = team_scoring %>%
   group_by(DayNum, team_id) %>%
-  summarize(mean_score = mean(score), sd_score = sd(score), mean_diff_pct = mean(diff_pct)) %>%
+  summarize(mean_score = mean(score), sd_score = sd(score)) %>%
   mutate(sd_score = replace_na(sd_score, 1)) %>%
   group_by(team_id) %>%
-  summarize(mean_score = mean(mean_score), sd_score = mean(sd_score), mean_diff_pct = mean(mean_diff_pct)) %>%
+  summarize(mean_score = mean(mean_score), sd_score = mean(sd_score)) %>%
   mutate(sd_score = replace_na(sd_score, 1))
 
 by_gametype = team_scoring %>%
   group_by(game_type, team_id) %>%
-  summarize(mean_score = mean(score), sd_score = sd(score), mean_diff_pct = mean(diff_pct)) %>%
+  summarize(mean_score = mean(score), sd_score = sd(score)) %>%
   mutate(sd_score = replace_na(sd_score, 1)) %>%
   group_by(team_id) %>%
-  summarize(mean_score = mean(mean_score), sd_score = mean(sd_score), mean_diff_pct = mean(mean_diff_pct)) %>%
+  summarize(mean_score = mean(mean_score), sd_score = mean(sd_score)) %>%
   mutate(sd_score = replace_na(sd_score, 1))
 
 by_seed = team_scoring %>%
   group_by(seed, team_id) %>%
-  summarize(mean_score = mean(score), sd_score = sd(score), mean_diff_pct = mean(diff_pct)) %>%
+  summarize(mean_score = mean(score), sd_score = sd(score)) %>%
   mutate(sd_score = replace_na(sd_score, 1)) %>%
   group_by(team_id) %>%
-  summarize(mean_score = mean(mean_score), sd_score = mean(sd_score), mean_diff_pct = mean(mean_diff_pct)) %>%
+  summarize(mean_score = mean(mean_score), sd_score = mean(sd_score)) %>%
   mutate(sd_score = replace_na(sd_score, 1))
 
 by_win = team_scoring %>%
   group_by(win, team_id) %>%
-  summarize(mean_score = mean(score), sd_score = sd(score), mean_diff_pct = mean(diff_pct)) %>%
+  summarize(mean_score = mean(score), sd_score = sd(score)) %>%
   mutate(sd_score = replace_na(sd_score, 1)) %>%
   group_by(team_id) %>%
-  summarize(mean_score = mean(mean_score), sd_score = mean(sd_score), mean_diff_pct = mean(mean_diff_pct)) %>%
+  summarize(mean_score = mean(mean_score), sd_score = mean(sd_score)) %>%
   mutate(sd_score = replace_na(sd_score, 1))
 
 by_seeddiff = team_scoring %>%
   group_by(seed_diff, team_id) %>%
-  summarize(mean_score = mean(score), sd_score = sd(score), mean_diff_pct = mean(diff_pct)) %>%
+  summarize(mean_score = mean(score), sd_score = sd(score)) %>%
   mutate(sd_score = replace_na(sd_score, 1)) %>%
   group_by(team_id) %>%
-  summarize(mean_score = mean(mean_score), sd_score = mean(sd_score), mean_diff_pct = mean(mean_diff_pct)) %>%
+  summarize(mean_score = mean(mean_score), sd_score = mean(sd_score)) %>%
   mutate(sd_score = replace_na(sd_score, 1))
 ```
 
@@ -150,7 +170,15 @@ team_stats = by_season %>%
   summarize(team_mean_score = mean(mean_score), team_sd_score = mean(sd_score))
 ```
 
-```{r simulation}
-
+```{r what_to_use}
+# Use:
+team_stats
+seed_diff
+tournament
+```
+```{r}
+final_data = tournament %>%
+  left_join(team_stats, c('team1' = 'team_id')) %>%
+  left_join(team_stats, c('team2' = 'team_id'), suffix.x = '_1', suffix.y = '_2')
 ```
 
